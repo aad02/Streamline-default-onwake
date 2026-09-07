@@ -2446,7 +2446,7 @@ export function renderWakeDefaultPresetSettings() {
                         <div class="flex flex-col font-['Inter:Bold',sans-serif] font-bold justify-center leading-[0] not-italic relative text-[#385a92] text-[30px]">
                             <p class="leading-[1.2]" data-i18n-key="Wake default">Wake default</p>
                         </div>
-                        <select id="wake-default-preset-select" class="bg-[#385a92] border-2 border-[#385a92] border-solid h-[62.88px] rounded-[2617.374px] w-[420px] text-white text-[24px] p-2">
+                        <select id="wake-default-preset-select" class="bg-[#385a92] border-2 border-[#385a92] border-solid h-[62.88px] rounded-[2617.374px] w-[250px] text-white text-[24px] p-2">
                             ${options}
                         </select>
                     </div>
