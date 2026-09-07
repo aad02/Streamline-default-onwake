@@ -1,6 +1,6 @@
 {
-  "id": "streamline.js",
-  "name": "Streamline.js",
-  "description": "Modern, feature-complete WebUI skin for Streamline-Bridge",
+  "id": "streamline-wake-preset-dev",
+  "name": "Streamline.js (Wake Preset Dev)",
+  "description": "Streamline.js fork under development: default quick-toggle profile on machine wake. Installs alongside the official streamline.js skin instead of replacing it.",
   "version": "0.1.107"
 }
