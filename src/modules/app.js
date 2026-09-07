@@ -13,6 +13,7 @@ import { loadPage, initRouter, isSubPage, prefetchSettingsPage } from './router.
 import { initWaterTankSocket } from './waterTank.js';
 import { logger } from './logger.js';
 import { deriveScreensaverAction, isMachineAsleep, isScreensaverSuppressed } from './screensaver-policy.js';
+import { getWakeDefaultPreset, loadWakeDefaultPreset, resolveWakeDefaultSlot } from './wake-default-preset.js';
 import { createMachineLinkWatcher, machineFromDevicesPayload } from './machine-link.js';
 import { setMachineModel, isBengleMachine, setRefillKitPresent, isRefillKitPresent } from './machine.js';
 import { classifyStopReason, canonicalStopReason, STOP_TARGET_WEIGHT, STOP_TARGET_VOLUME, STOP_PROFILE_ENDED } from './stop-reason.js';
@@ -604,6 +605,25 @@ function updateMilkProbeFromSnapshot(tempC) {
 }
 window.app.getMilkProbe = () => ({ present: milkProbeState.present, temperature: latestMilkTemp });
 
+// Force-loads the user's configured wake-default favorite, if any, onto the
+// machine. Called only after loadInitialData() has resolved (see the wake
+// branch in handleData below) so this runs after the post-wake reconnection
+// refresh, not racing it — otherwise loadInitialData's own favorite-button
+// highlight/profile-name repaint could land after this and silently undo it.
+function applyWakeDefaultPreset() {
+    const slot = resolveWakeDefaultSlot(getWakeDefaultPreset(), profileManager.FAV_COUNT);
+    if (slot === null) return;
+
+    const profileKey = profileManager.favoriteAssignments[slot];
+    if (!profileKey || !profileManager.availableProfiles[profileKey]) {
+        logger.warn(`Wake default preset is favorite ${slot + 1}, but that slot has no profile assigned. Leaving the restored profile active.`);
+        return;
+    }
+
+    logger.info(`Applying wake default preset: favorite ${slot + 1}.`);
+    profileManager.applyFavoriteProfile(slot).catch(err => logger.error('Failed to apply wake default preset:', err));
+}
+
 function handleData(data) {
     if (!data?.state) {
         logger.warn('Received WebSocket message with missing state:', data);
@@ -675,7 +695,7 @@ function handleData(data) {
     const wasSleeping = previousState.state === MachineState.SLEEPING;
     if (wasSleeping && state !== MachineState.SLEEPING && state !== MachineState.ERROR) {
         logger.info('Machine woke from sleep. Reloading initial data.');
-        loadInitialData();
+        loadInitialData().then(applyWakeDefaultPreset);
 
         // Hold off "[Reconnect]" — REA fires devices ws scanning ~3s after wake.
         // Show "Scanning..." until grace window expires or scanning flag arrives.
@@ -1892,7 +1912,7 @@ async function initMainPageOnce() {
     mainPageInitPromise = (async () => {
         logger.info('initMainPageOnce: starting.');
         const historyInit = history.initHistory().then(resolveHistoryReady);
-        await Promise.all([historyInit, profileManager.init()]);
+        await Promise.all([historyInit, profileManager.init(), loadWakeDefaultPreset(profileManager.FAV_COUNT)]);
         window.app.saveGrindToActiveProfile = (val) => profileManager.saveGrindToActiveProfile(val);
         window.app.saveContextToActiveProfile = (fields) => profileManager.saveContextToActiveProfile(fields);
         window.app.getActiveProfileRecord = () => profileManager.getActiveProfileRecord();

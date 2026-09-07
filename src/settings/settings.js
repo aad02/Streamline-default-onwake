@@ -10,6 +10,8 @@ import { isBengleMachine, setMachineModel } from '../modules/machine.js';
 import { resolveSteamStopMode, applyMilkProbeGate } from '../modules/steam-mode.js';
 import { summarizeFirmwareCatalog, isFirmwareCancellationError, estimateRemainingSeconds, isUploadComplete, estimateVerifyRemainingSeconds, estimateTotalRemainingSeconds, FIRMWARE_VERIFY_SECONDS, formatDuration } from '../modules/firmware-progress.js';
 import { setScreensaverSuppressed, isMachineAsleep } from '../modules/screensaver-policy.js';
+import { favoriteAssignments, availableProfiles, translateProfileTitle, FAV_COUNT } from '../modules/profileManager.js';
+import { WAKE_DEFAULT_LAST_USED, getWakeDefaultPreset, setWakeDefaultPreset } from '../modules/wake-default-preset.js';
 import { ledRgbToColor16, ledColor16ToHex8, ledHexToRgb, ledPreviewComposite } from '../modules/led-color.js';
 import { isCupWarmerOn, readCupWarmerTarget, clampCupWarmerTarget, clampPrewarmMinutes, resolvePrewarm, prewarmWarnings, prewarmShapeSignature, cupWarmerViewMode, formatCurrentMatTemp, getCupWarmerState, setCupWarmerState, patchCupWarmerState, onCupWarmerStateChange, CUP_WARMER_TARGET_KEY, PREWARM_MIN_MINUTES, PREWARM_MAX_MINUTES } from '../modules/cup-warmer.js';
 import { clampCalWeight, calActionState, CAL_WEIGHT_DEFAULT_G, CAL_WEIGHT_MIN_G, CAL_WEIGHT_MAX_G } from '../modules/loadcell-cal.js';
@@ -475,6 +477,9 @@ function updateSettingsContentArea(category) {
         if (category === 'tempunit') {
             setTimeout(initTempUnitSettings, 0);
         }
+        if (category === 'wakedefaultpreset') {
+            setTimeout(initWakeDefaultPresetSettings, 0);
+        }
         if (category === 'talkdecent') {
             setTimeout(() => window.updateTalkToDecentUI?.(), 0);
         }
@@ -755,6 +760,8 @@ export function renderSettingsContent(category) {
             return renderWakeLockSettings();
         case 'presence':
             return renderPresenceSettings();
+        case 'wakedefaultpreset':
+            return renderWakeDefaultPresetSettings();
         case 'unitssettings':
             return renderUnitsSettings();
         case 'fontsize':
@@ -2405,6 +2412,62 @@ export function renderTempUnitSettings() {
             </div>
         </div>
     `;
+}
+
+// Label shown in the dropdown option for one favorite slot: the assigned
+// profile's translated title, or an "(unassigned)" placeholder so the option
+// stays selectable (and self-explanatory) even before the user has set that
+// slot up.
+function favoriteSlotOptionLabel(slot) {
+    const profileKey = favoriteAssignments[slot];
+    const record = profileKey ? availableProfiles[profileKey] : null;
+    const title = record ? translateProfileTitle(record.profile?.title) : null;
+    const label = title || getTranslation('(unassigned)');
+    return `${getTranslation('Preset')} ${slot + 1}: ${label}`;
+}
+
+export function renderWakeDefaultPresetSettings() {
+    const current = getWakeDefaultPreset();
+    const options = [
+        `<option value="${WAKE_DEFAULT_LAST_USED}"${current === WAKE_DEFAULT_LAST_USED ? ' selected' : ''} data-i18n-key="Last Used (Default)">${getTranslation('Last Used (Default)')}</option>`,
+        ...Array.from({ length: FAV_COUNT }, (_, slot) =>
+            `<option value="${slot}"${current === slot ? ' selected' : ''}>${favoriteSlotOptionLabel(slot)}</option>`)
+    ].join('');
+
+    return `
+        <div class="content-stretch flex flex-col gap-[60px] items-start relative w-full">
+            <div class="flex flex-col font-['Inter:Semi_Bold',sans-serif] font-semibold justify-center leading-[0] min-w-full not-italic relative text-[var(--text-primary)] text-[36px] text-center w-[min-content]">
+                <p class="leading-[1.2]" data-i18n-key="Default Profile on Wake">Default Profile on Wake</p>
+            </div>
+
+            <div class="content-stretch flex flex-col items-start relative w-full">
+                <div class="content-stretch flex flex-col gap-[30px] items-start relative w-full">
+                    <div class="content-stretch flex items-center justify-between relative w-full">
+                        <div class="flex flex-col font-['Inter:Bold',sans-serif] font-bold justify-center leading-[0] not-italic relative text-[#385a92] text-[30px]">
+                            <p class="leading-[1.2]" data-i18n-key="Wake default">Wake default</p>
+                        </div>
+                        <select id="wake-default-preset-select" class="bg-[#385a92] border-2 border-[#385a92] border-solid h-[62.88px] rounded-[2617.374px] w-[420px] text-white text-[24px] p-2">
+                            ${options}
+                        </select>
+                    </div>
+                    <p class="font-['Inter:Regular',sans-serif] font-normal leading-[1.4] not-italic relative text-[var(--text-primary)] text-[24px] w-full" data-i18n-key="Lock a quick-toggle preset as the profile that loads whenever the machine wakes from sleep, instead of restoring whatever was active before it slept.">
+                        Lock a quick-toggle preset as the profile that loads whenever the machine wakes from sleep, instead of restoring whatever was active before it slept.
+                    </p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function initWakeDefaultPresetSettings() {
+    const select = document.getElementById('wake-default-preset-select');
+    if (!select) return;
+    select.addEventListener('change', (e) => {
+        const value = e.target.value === WAKE_DEFAULT_LAST_USED ? WAKE_DEFAULT_LAST_USED : Number(e.target.value);
+        if (!setWakeDefaultPreset(value, FAV_COUNT)) {
+            logger.error(`Rejected invalid wakeDefaultPreset value from settings UI: ${e.target.value}`);
+        }
+    });
 }
 
 function initTempUnitSettings() {
@@ -7027,6 +7090,7 @@ function getCategoryTitle(category) {
         case 'calib_sensors': return 'Sensor Calibration';
         case 'de1advanced': return 'Before espresso starts';
         case 'homeassistant': return 'Home Assistant';
+        case 'wakedefaultpreset': return 'Default Profile on Wake';
         default: return 'Settings';
     }
 }

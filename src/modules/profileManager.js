@@ -44,7 +44,7 @@ export async function renameProfile(profileId, newTitle) {
     }
 }
 
-const FAV_COUNT = 5;
+export const FAV_COUNT = 5;
 const PROFILES_PATH = 'profiles/';
 
 const SETTINGS_NAMESPACE = 'streamline-app';
@@ -589,9 +589,20 @@ async function handleProfileClick(index) {
         return;
     }
 
+    await applyFavoriteProfile(index);
+}
+
+/**
+ * Sends the profile assigned to favorite slot `index` to the machine and
+ * updates the favorite buttons' active-state styling. Unlike
+ * handleProfileClick, this never redirects to the profile selector — callers
+ * (the click handler, and the wake-default-preset hook in app.js) must
+ * already know the slot holds a valid, assigned profile.
+ */
+export async function applyFavoriteProfile(index) {
     // Add a unique identifier to track this specific call
     const callId = Date.now() + Math.random();
-    logger.info(`handleProfileClick called with index ${index}, callId: ${callId}, profileUpdateInProgress: ${profileUpdateInProgress}`);
+    logger.info(`applyFavoriteProfile called with index ${index}, callId: ${callId}, profileUpdateInProgress: ${profileUpdateInProgress}`);
 
     // Check the global flag to prevent duplicate execution
     if (profileUpdateInProgress) {
@@ -696,7 +707,7 @@ async function handleProfileClick(index) {
                 button.classList.add('bg-[var(--profile-button-background-color)]');
             }
         }
-        logger.info(`handleProfileClick completed (callId: ${callId}), reset profileUpdateInProgress flag`);
+        logger.info(`applyFavoriteProfile completed (callId: ${callId}), reset profileUpdateInProgress flag`);
     }
 }
 

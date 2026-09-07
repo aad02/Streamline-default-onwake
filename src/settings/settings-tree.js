@@ -80,6 +80,7 @@ export const SETTINGS_TREE = {
             { id: 'brightness', name: 'Brightness', settingsCategory: 'brightness' },
             { id: 'wakelock', name: 'Wake Lock', settingsCategory: 'wakelock' },
             { id: 'presence', name: 'Presence Detection', settingsCategory: 'presence' },
+            { id: 'wakedefaultpreset', name: 'Default Profile on Wake', settingsCategory: 'wakedefaultpreset' },
             { id: 'fontsize', name: 'Display Size', settingsCategory: 'fontsize' },
             { id: 'tempunit', name: 'Temperature', settingsCategory: 'tempunit', i18nKey: 'Temperature' },
             { id: 'screensaver', name: 'Screen Saver', settingsCategory: 'screensaver' },

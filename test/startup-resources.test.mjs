@@ -99,7 +99,7 @@ test('core startup does not wait for Visualizer verification', () => {
     const app = read('src/modules/app.js');
     assert.doesNotMatch(app, /await initVisualizer\(\)/);
     assert.match(app, /connectShotSettingsWebSocket\(handleShotSettingsData\);\s*void initVisualizer\(\)/);
-    assert.match(app, /Promise\.all\(\[historyInit, profileManager\.init\(\)\]\)/);
+    assert.match(app, /Promise\.all\(\[historyInit, profileManager\.init\(\), loadWakeDefaultPreset\(profileManager\.FAV_COUNT\)\]\)/);
 });
 
 test('expanded chart closes only from explicit controls', () => {

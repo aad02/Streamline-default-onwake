@@ -47,6 +47,8 @@ Important behavior:
 
 Do not create a second favorites store or store titles in place of stable record IDs.
 
+`applyFavoriteProfile(index)` is the profile-send-and-highlight logic shared by the favorite button click handler (`handleProfileClick`) and the wake-default-preset hook in `app.js` (`applyWakeDefaultPreset`, gated by `src/modules/wake-default-preset.js`'s `resolveWakeDefaultSlot`). Unlike `handleProfileClick`, it never redirects to the profile selector — callers must already know the slot holds a valid, assigned profile. The wake hook runs only after `loadInitialData()` resolves, so it applies after the post-wake reconnection refresh instead of racing it.
+
 ## Legacy Profile Migration
 
 `profileManager.js` contains a one-time migration from the old private `streamline` KV namespace into the shared profiles API.
@@ -95,6 +97,7 @@ Do not write only the visible title and assume the machine has the intended reco
 npm test
 node --test test/active-profile.test.mjs
 node --test test/assign-favorite.test.mjs
+node --test test/wake-default-preset.test.mjs
 ```
 
 For editor or migration changes, add focused pure tests and manually test default profile, user fork with the same title, rename, edit that changes ID, favorite remap, delete/hide, offline cache, and a partially failed migration.
