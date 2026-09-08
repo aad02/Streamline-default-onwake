@@ -682,7 +682,27 @@ function handleData(data) {
         // frame fall through to the generic renderer (plain text, no coloured spans).
         if (state !== MachineState.SLEEPING) {
             logger.info('DE1 machine reconnected. Loading initial data.');
-            loadInitialData(); // Refresh all configuration data
+            // A reconnect that lands already-awake is also a wake, distinct from the
+            // in-session sleeping -> awake transition below: if the BLE/USB link itself
+            // drops while the machine sleeps (common), the wake never shows up as a
+            // previousState.state === SLEEPING transition -- it shows up here instead,
+            // as isDe1Connected flipping false -> true with a non-sleeping state.
+            //
+            // Gated on previousState.state being known (not the app's first-ever frame
+            // this session): an unconditional apply here would also fire on a cold app
+            // launch/WebView reload with the machine already running some unrelated
+            // profile, forcing the wake-default onto a machine that was never asleep.
+            // That is strictly narrower than "was this machine actually asleep" -- a
+            // reconnect from a non-sleep disconnect (mid-session BLE blip) still applies
+            // it -- but silently missing a genuine sleep-induced link drop is worse than
+            // that rare false positive, and there is no signal available here to tell
+            // the two apart (the disconnect gap loses whatever the machine reported).
+            const isFirstFrameThisSession = previousState.state === undefined;
+            if (isFirstFrameThisSession) {
+                loadInitialData(); // Refresh all configuration data
+            } else {
+                loadInitialData().then(applyWakeDefaultPreset); // Refresh all configuration data, then apply any configured wake-default
+            }
         }
         // Do not clear chart or reset shotStartTime as per user request
     } else if (state === MachineState.ERROR && isDe1Connected) {
